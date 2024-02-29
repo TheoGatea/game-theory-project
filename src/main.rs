@@ -15,50 +15,40 @@ impl App {
             font_data: BTreeMap::from([("pixelmplus".to_string(), font)]),
             families: BTreeMap::from([(FontFamily::Monospace, vec!["pixelmplus".to_string()])]),
         };
+
+        let mut text_styles = BTreeMap::new();
+        text_styles.insert(TextStyle::Small, FontId::monospace(9.0));
+        text_styles.insert(TextStyle::Body, FontId::monospace(12.5));
+        text_styles.insert(TextStyle::Monospace, FontId::monospace(12.0));
+        text_styles.insert(TextStyle::Button, FontId::monospace(20.0));
+        text_styles.insert(TextStyle::Heading, FontId::monospace(18.0));
+
         cc.egui_ctx.set_fonts(fonts);
-        cc.egui_ctx.style_mut(|s| {
-            s.text_styles = BTreeMap::from([
-                (
-                    TextStyle::Small,
-                    FontId {
-                        size: 9.0,
-                        family: FontFamily::Monospace,
-                    },
-                ),
-                (
-                    TextStyle::Body,
-                    FontId {
-                        size: 12.5,
-                        family: FontFamily::Monospace,
-                    },
-                ),
-                (
-                    TextStyle::Monospace,
-                    FontId {
-                        size: 12.0,
-                        family: FontFamily::Monospace,
-                    },
-                ),
-                (
-                    TextStyle::Button,
-                    FontId {
-                        size: 20.0,
-                        family: FontFamily::Monospace,
-                    },
-                ),
-                (
-                    TextStyle::Heading,
-                    FontId {
-                        size: 18.0,
-                        family: FontFamily::Monospace,
-                    },
-                ),
-            ]);
-        });
+        cc.egui_ctx.style_mut(|s| s.text_styles = text_styles);
 
         Self {
-            show_viewport: false
+            show_viewport: false,
         }
+    }
+
+    fn show_grid(&mut self, ui: &mut egui::Ui) {
+        egui::Grid::new("some_unique_id").show(ui, |ui| {
+            ui.label("First row, first column");
+            ui.label("First row, second column");
+            ui.end_row();
+
+            ui.label("Second row, first column");
+            ui.label("Second row, second column");
+            ui.label("Second row, third column");
+            ui.end_row();
+
+            ui.horizontal(|ui| {
+                ui.label("Same");
+                ui.label("cell");
+            });
+            ui.label("Third row, second column");
+            ui.end_row();
+        });
     }
 
     fn show(&mut self, ui: &mut egui::Ui) {
@@ -70,25 +60,23 @@ impl App {
 
         if self.show_viewport {
             ui.ctx().show_viewport_immediate(
-                egui::ViewportId::from_hash_of("immediate_viewport"),
+                egui::ViewportId::from_hash_of("grid"),
                 egui::ViewportBuilder::default()
-                    .with_title("Immediate Viewport")
-                    .with_inner_size([200.0, 100.0]),
+                    .with_title("Grid")
+                    .with_inner_size([400.0, 400.0]),
                 |ctx, class| {
                     assert!(
                         class == egui::ViewportClass::Immediate,
                         "This egui backend doesn't support multiple viewports"
                     );
 
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        ui.label("Hello from immediate viewport");
-                    });
+                    egui::CentralPanel::default().show(ctx, |ui| self.show_grid(ui));
 
                     if ctx.input(|i| i.viewport().close_requested()) {
                         // Tell parent viewport that we should not show next frame:
                         self.show_viewport = false;
                     }
-                }
+                },
             );
         }
     }
