@@ -62,13 +62,13 @@ pub fn evil(_own_prev_move: Option<Decision>,
 
 pub fn random(_own_prev_move: Option<Decision>,
     _other_prev_move: Option<Decision>) -> Decision {
-        let dist = Bernoulli::new(0.5).unwrap();
-        let res = dist.sample(&mut rand::thread_rng());
-        match res {
-            true => Decision::Cooperate,
-            false => Decision::Defect          
-        }
+    let dist = Bernoulli::new(0.5).unwrap();
+    let res = dist.sample(&mut rand::thread_rng());
+    match res {
+        true => Decision::Cooperate,
+        false => Decision::Defect          
     }
+}
 
 pub fn xor(own_prev_move: Option<Decision>,
     other_prev_move: Option<Decision>) -> Decision {
