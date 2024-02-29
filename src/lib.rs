@@ -1,6 +1,12 @@
 use rand::distributions::{Bernoulli, Distribution};
 use std::ops::Not;
 
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    #[error("ui: {0}")]
+    UI(#[from] eframe::Error),
+}
+
 pub enum Decision {
     Cooperate,
     Defect
