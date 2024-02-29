@@ -1,5 +1,5 @@
 use rand::distributions::{Bernoulli, Distribution};
-use std::ops::Not;
+use std::{collections::HashMap, ops::Not};
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -26,9 +26,13 @@ impl Not for Decision {
 pub type DecisionTable = fn(Option<Decision>, Option<Decision>) -> Decision;
 
 pub struct Player {
-    prev_move_self: Option<Decision>,
-    prev_move_other: Option<Decision>,
+    // stores own previous move towards players keyed by a String, values initialised to None
+    prev_move_self: HashMap<String, Option<Decision>>,
+    // stores other players decisions towards self, same storage
+    prev_move_other: HashMap<String, Option<Decision>>,
+    // function pointer to strategy
     strategy: DecisionTable,
+    // name of used player strategy
     strategy_name: String
 }
 
@@ -118,7 +122,7 @@ pub fn nand(own_prev_move: Option<Decision>,
 
 pub fn random_biased(_own_prev_move: Option<Decision>,
     _other_prev_move: Option<Decision>) -> Decision {
-    let dist = Bernoulli::new(0.5).unwrap();
+    let dist = Bernoulli::new(0.3).unwrap();
     let res = dist.sample(&mut rand::thread_rng());
     match res {
         true => Decision::Cooperate,
