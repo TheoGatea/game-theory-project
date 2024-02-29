@@ -81,6 +81,8 @@ impl App {
             );
         }
 
+        let font_height = cell_width / 4.0;
+
         // Draw the numbers within each cell.
         for ((row, col), value) in self.grid.indexed_iter() {
             let offset_x = cell_width * row as f32;
@@ -96,7 +98,7 @@ impl App {
                 cell_rect.center(),
                 egui::Align2::CENTER_CENTER,
                 value.to_string(),
-                FontId::monospace(30.0),
+                FontId::monospace(font_height),
                 Color32::BLACK,
             );
         }
@@ -113,7 +115,7 @@ impl App {
 
     fn show(&mut self, ui: &mut egui::Ui) {
         let text = format!("grid size {}", self.grid_size);
-        let slider = egui::widgets::Slider::new(&mut self.grid_size, 1..=100)
+        let slider = egui::widgets::Slider::new(&mut self.grid_size, 1..=20)
             .text(text)
             .show_value(false);
 
@@ -129,6 +131,7 @@ impl App {
             ui.ctx().show_viewport_immediate(
                 egui::ViewportId::from_hash_of("grid"),
                 egui::ViewportBuilder::default()
+                    .with_maximize_button(false)
                     .with_title("Grid")
                     .with_inner_size([400.0, 400.0])
                     .with_min_inner_size([100.0, 100.0]),
