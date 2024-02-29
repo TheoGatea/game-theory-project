@@ -1,11 +1,13 @@
 use gametheory::Error;
 
 use eframe::egui;
-use egui::{FontData, FontFamily, FontId, TextStyle};
+use egui::{Color32, FontData, FontFamily, FontId, TextStyle};
+use grid::Grid;
 use std::collections::BTreeMap;
 
 struct App {
     show_viewport: bool,
+    grid: Grid<u8>,
 }
 
 impl App {
@@ -28,27 +30,83 @@ impl App {
 
         Self {
             show_viewport: false,
+            grid: Grid::new(5, 5), // must be greater than 0x0 and be square
         }
     }
 
     fn show_grid(&mut self, ui: &mut egui::Ui) {
-        egui::Grid::new("some_unique_id").show(ui, |ui| {
-            ui.label("First row, first column");
-            ui.label("First row, second column");
-            ui.end_row();
+        const CELL_SIZE_PERCENTAGE: f32 = 1.0;
+        const GRID_LINE_WIDTH: f32 = 4.;
 
-            ui.label("Second row, first column");
-            ui.label("Second row, second column");
-            ui.label("Second row, third column");
-            ui.end_row();
+        let rows = self.grid.rows();
+        let cols = self.grid.cols();
+        let grid_width = ui.available_width() * CELL_SIZE_PERCENTAGE;
+        let grid_height = ui.available_height() * CELL_SIZE_PERCENTAGE;
+        let cell_width = grid_width / cols as f32;
+        let cell_height = grid_height / rows as f32;
 
-            ui.horizontal(|ui| {
-                ui.label("Same");
-                ui.label("cell");
-            });
-            ui.label("Third row, second column");
-            ui.end_row();
-        });
+        // Allocate the total space based on the available size.
+        let rect = ui.allocate_space(egui::vec2(grid_width, grid_height)).1;
+        
+        let painter = ui.painter();
+
+        // Set the background to white.
+        painter.rect_filled(rect, 0.0, Color32::WHITE);
+
+        // Draw the vertical grid lines.
+        for row in 0..=cols {
+            let offset_x = cell_width * row as f32;
+
+            painter.line_segment(
+                [
+                    egui::pos2(rect.left() + offset_x, rect.top()),
+                    egui::pos2(rect.left() + offset_x, rect.bottom()),
+                ],
+                (GRID_LINE_WIDTH, Color32::BLACK),
+            );
+        }
+
+        // Draw the horizontal grid lines.
+        for col in 0..=rows {
+            let offset_y = cell_height * col as f32;
+
+            painter.line_segment(
+                [
+                    egui::pos2(rect.left(), rect.top() + offset_y),
+                    egui::pos2(rect.right(), rect.top() + offset_y),
+                ],
+                (GRID_LINE_WIDTH, Color32::BLACK),
+            );
+        }
+
+        // Draw the numbers within each cell.
+        for ((row, col), value) in self.grid.indexed_iter() {
+            let offset_x = cell_width * row as f32;
+            let offset_y = cell_height * col as f32;
+
+            let cell_rect = egui::Rect::from_min_size(
+                egui::pos2(rect.left() + offset_x, rect.top() + offset_y),
+                egui::vec2(cell_width, cell_height),
+            );
+
+            // Draw the value.
+            painter.text(
+                cell_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                value.to_string(),
+                FontId::monospace(30.0),
+                Color32::BLACK,
+            );
+        }
+    }
+
+    fn show_viewport(&mut self, ui: &mut egui::Ui) {
+        self.show_grid(ui);
+
+        if ui.input(|i| i.viewport().close_requested()) {
+            // Tell parent viewport that we should not show next frame:
+            self.show_viewport = false;
+        }
     }
 
     fn show(&mut self, ui: &mut egui::Ui) {
@@ -70,12 +128,7 @@ impl App {
                         "This egui backend doesn't support multiple viewports"
                     );
 
-                    egui::CentralPanel::default().show(ctx, |ui| self.show_grid(ui));
-
-                    if ctx.input(|i| i.viewport().close_requested()) {
-                        // Tell parent viewport that we should not show next frame:
-                        self.show_viewport = false;
-                    }
+                    egui::CentralPanel::default().show(ctx, |ui| self.show_viewport(ui));
                 },
             );
         }
