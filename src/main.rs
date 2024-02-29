@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 
 struct App {
     show_viewport: bool,
+    grid_size: usize,
     grid: Grid<u8>,
 }
 
@@ -28,26 +29,27 @@ impl App {
         cc.egui_ctx.set_fonts(fonts);
         cc.egui_ctx.style_mut(|s| s.text_styles = text_styles);
 
+        let grid_size = 1;
         Self {
             show_viewport: false,
-            grid: Grid::new(5, 5), // must be greater than 0x0 and be square
+            grid_size,
+            grid: Grid::new(grid_size, grid_size),
         }
     }
 
     fn show_grid(&mut self, ui: &mut egui::Ui) {
-        const CELL_SIZE_PERCENTAGE: f32 = 1.0;
         const GRID_LINE_WIDTH: f32 = 4.;
 
         let rows = self.grid.rows();
         let cols = self.grid.cols();
-        let grid_width = ui.available_width() * CELL_SIZE_PERCENTAGE;
-        let grid_height = ui.available_height() * CELL_SIZE_PERCENTAGE;
+        let grid_width = ui.available_width();
+        let grid_height = ui.available_height();
         let cell_width = grid_width / cols as f32;
         let cell_height = grid_height / rows as f32;
 
         // Allocate the total space based on the available size.
         let rect = ui.allocate_space(egui::vec2(grid_width, grid_height)).1;
-        
+
         let painter = ui.painter();
 
         // Set the background to white.
@@ -110,7 +112,14 @@ impl App {
     }
 
     fn show(&mut self, ui: &mut egui::Ui) {
-        ui.heading("Hello World!");
+        let text = format!("grid size {}", self.grid_size);
+        let slider = egui::widgets::Slider::new(&mut self.grid_size, 1..=100)
+            .text(text)
+            .show_value(false);
+
+        if ui.add(slider).dragged() {
+            self.grid = Grid::new(self.grid_size, self.grid_size);
+        }
 
         if ui.button("run").clicked() {
             self.show_viewport = true;
@@ -121,7 +130,8 @@ impl App {
                 egui::ViewportId::from_hash_of("grid"),
                 egui::ViewportBuilder::default()
                     .with_title("Grid")
-                    .with_inner_size([400.0, 400.0]),
+                    .with_inner_size([400.0, 400.0])
+                    .with_min_inner_size([100.0, 100.0]),
                 |ctx, class| {
                     assert!(
                         class == egui::ViewportClass::Immediate,
