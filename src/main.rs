@@ -5,7 +5,7 @@ use egui::{Color32, FontData, FontFamily, FontId, TextStyle};
 use grid::Grid;
 use std::collections::{BTreeMap, HashMap};
 
-pub struct Player {
+struct Player {
     // stores own previous move towards players keyed by a String, values initialised to None
     prev_move_self: HashMap<String, Option<Decision>>,
     // stores other players decisions towards self, same storage
@@ -16,10 +16,55 @@ pub struct Player {
     strategy_name: String
 }
 
+struct Tournament {
+    players: Vec<Player>,
+    scores: Grid<(i32, i32)>,
+    max_iter: u32,
+    current_iter: u32
+}
+
 struct App {
     show_viewport: bool,
     grid_size: usize,
     grid: Grid<u8>,
+}
+
+impl Tournament {
+    fn initialise() -> Self {
+        let score_grid = Grid::from_vec(vec![(0, 0); 100], 10);
+        let player_init_data: [(&str, DecisionTable); 10] = 
+            [("trusting tit for tat", good_tit_for_tat),
+            ("suspicious tit for tat", sus_tit_for_tat),
+            ("naive", naive),
+            ("evil", evil),
+            ("random", random),
+            ("xor logic", xor),
+            ("opposite tit for tat", opposite_tit_for_tat),
+            ("xnor logic", xnor),
+            ("nand lodic", nand),
+            ("Bernoulli uncooperative", random_biased)];
+        let mut players_lst = Vec::new();
+        for (name, table) in player_init_data {
+            let mut initial_player_memory: HashMap<String, Option<Decision>> = HashMap::new();
+            for (opponent_name, _) in player_init_data {
+                initial_player_memory.insert(opponent_name.to_owned(), None);
+            }
+            let memory_of_opponents = initial_player_memory.clone();
+            let p = Player {
+                prev_move_self: initial_player_memory,
+                prev_move_other: memory_of_opponents,
+                strategy: table,
+                strategy_name: name.to_owned()
+            };
+            players_lst.push(p);
+        }
+        Tournament {
+            players: players_lst,
+            scores: score_grid,
+            max_iter: 0,
+            current_iter: 0
+        }
+    }
 }
 
 impl App {
