@@ -20,7 +20,8 @@ struct Tournament {
     players: Vec<Player>,
     scores: Grid<(i32, i32)>,
     max_iter: u32,
-    current_iter: u32
+    current_iter: u32,
+    rewardsystem: RewardFunc
 }
 
 struct App {
@@ -29,8 +30,10 @@ struct App {
     grid: Grid<u8>,
 }
 
+type RewardFunc = fn (Decision, Decision) -> i32;
+
 impl Tournament {
-    fn initialise(n_iter: u32) -> Self {
+    fn initialise_from(n_iter: u32, rules: RewardFunc) -> Self {
         let score_grid = Grid::from_vec(vec![(0, 0); 100], 10);
         let player_init_data: [(&str, DecisionTable); 10] = 
             [("trusting tit for tat", good_tit_for_tat),
@@ -62,7 +65,8 @@ impl Tournament {
             players: players_lst,
             scores: score_grid,
             max_iter: n_iter,
-            current_iter: 0
+            current_iter: 0,
+            rewardsystem: rules
         }
     }
 }
