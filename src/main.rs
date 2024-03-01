@@ -30,7 +30,7 @@ struct App {
 }
 
 impl Tournament {
-    fn initialise() -> Self {
+    fn initialise(n_iter: u32) -> Self {
         let score_grid = Grid::from_vec(vec![(0, 0); 100], 10);
         let player_init_data: [(&str, DecisionTable); 10] = 
             [("trusting tit for tat", good_tit_for_tat),
@@ -61,7 +61,7 @@ impl Tournament {
         Tournament {
             players: players_lst,
             scores: score_grid,
-            max_iter: 0,
+            max_iter: n_iter,
             current_iter: 0
         }
     }
