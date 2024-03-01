@@ -1,9 +1,20 @@
-use gametheory::Error;
+use gametheory::*;
 
 use eframe::egui;
 use egui::{Color32, FontData, FontFamily, FontId, TextStyle};
 use grid::Grid;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
+
+pub struct Player {
+    // stores own previous move towards players keyed by a String, values initialised to None
+    prev_move_self: HashMap<String, Option<Decision>>,
+    // stores other players decisions towards self, same storage
+    prev_move_other: HashMap<String, Option<Decision>>,
+    // function pointer to strategy
+    strategy: DecisionTable,
+    // name of used player strategy
+    strategy_name: String
+}
 
 struct App {
     show_viewport: bool,

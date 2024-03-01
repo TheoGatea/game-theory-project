@@ -1,5 +1,5 @@
 use rand::distributions::{Bernoulli, Distribution};
-use std::{collections::HashMap, ops::Not};
+use std::ops::Not;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
@@ -24,17 +24,6 @@ impl Not for Decision {
 }
 
 pub type DecisionTable = fn(Option<Decision>, Option<Decision>) -> Decision;
-
-pub struct Player {
-    // stores own previous move towards players keyed by a String, values initialised to None
-    prev_move_self: HashMap<String, Option<Decision>>,
-    // stores other players decisions towards self, same storage
-    prev_move_other: HashMap<String, Option<Decision>>,
-    // function pointer to strategy
-    strategy: DecisionTable,
-    // name of used player strategy
-    strategy_name: String
-}
 
 pub fn good_tit_for_tat(_own_prev_move: Option<Decision>,
         other_prev_move: Option<Decision>) -> Decision {
@@ -100,7 +89,23 @@ pub fn opposite_tit_for_tat(own_prev_move: Option<Decision>,
     !good_tit_for_tat(own_prev_move, other_prev_move)
 }
 
-pub fn and(own_prev_move: Option<Decision>,
+pub fn xnor(own_prev_move: Option<Decision>,
+    other_prev_move: Option<Decision>) -> Decision {
+    use Decision::*;
+    match (own_prev_move, other_prev_move) {
+        (None, None) => Cooperate,
+        (Some(own_pm), Some(other_pm)) => match (own_pm, other_pm) {
+            (Defect, Defect) => Cooperate,
+            (Cooperate, Defect) => Defect,
+            (Defect, Cooperate) => Defect,
+            (Cooperate, Cooperate) => Cooperate
+        }
+        (Some(_), None) | (None, Some(_)) => panic!("impossible move compination")
+    }
+}
+
+// no longer a strat on its own just a helper for the nand
+fn and(own_prev_move: Option<Decision>,
     other_prev_move: Option<Decision>) -> Decision {
     use Decision::*;
     match (own_prev_move, other_prev_move) {
