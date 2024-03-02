@@ -7,7 +7,7 @@ pub enum Error {
     UI(#[from] eframe::Error),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub enum Decision {
     Cooperate,
     Defect

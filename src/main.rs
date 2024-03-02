@@ -5,6 +5,7 @@ use egui::{Color32, FontData, FontFamily, FontId, TextStyle};
 use grid::Grid;
 use std::{collections::{BTreeMap, HashMap}, task::Wake};
 
+#[derive(Clone)]
 struct Player {
     // stores own previous move towards players keyed by a String, values initialised to None
     prev_move_self: HashMap<String, Option<Decision>>,
@@ -30,7 +31,8 @@ struct App {
     grid: Grid<u8>,
 }
 
-type RewardFunc = fn (Decision, Decision) -> i32;
+type RewardFunc = fn (&Decision, &Decision) -> (i32, i32);
+
 
 impl Tournament {
     fn initialise_from(n_iter: u32, rules: RewardFunc) -> Self {
@@ -70,6 +72,74 @@ impl Tournament {
             current_iter: 0,
             rewardsystem: rules
         }
+    }
+
+    fn iterate_round(&mut self) -> Option<()> {
+        if self.current_iter == self.max_iter {
+            return None;
+        }
+        let mut upperlim = 1;
+        let mut opponents = self.players.clone();
+        for j in 0..10 {
+            for i in 0..upperlim {
+                let player = &mut self.players[i];
+                let opponent = &mut opponents[j];
+                // get decisions
+                let player_decision = (player.strategy)
+                    (player.prev_move_self
+                        .get(&opponent.strategy_name)
+                        .expect("player memory should be complete")
+                        .clone(),
+                    player.prev_move_other
+                        .get(&opponent.strategy_name)
+                        .expect("player memory should be complete")
+                        .clone());
+                let opponent_decision = (opponent.strategy)
+                    (opponent.prev_move_self
+                        .get(&player.strategy_name)
+                        .expect("player memory should be complete")
+                        .clone(), 
+                    opponent.prev_move_other
+                        .get(&player.strategy_name)
+                        .expect("player memory should be complete")
+                        .clone());
+                // calculate score
+                let (n, m) = (self.rewardsystem)(&opponent_decision, &player_decision);
+                let (opponent_score, player_score) = self.scores[(i, j)];
+                self.scores[(i, j)] = (opponent_score + n, player_score + m);
+                // update memories
+                if let None = player.prev_move_self.remove(&opponent.strategy_name) {
+                    panic!("player memory should be complete")
+                }
+                player.prev_move_self.insert(opponent.strategy_name.clone(), Some(player_decision));
+                if let None = player.prev_move_other.remove(&opponent.strategy_name) {
+                    panic!("player memory should be complete")
+                }
+                player.prev_move_other.insert(opponent.strategy_name.clone(), Some(opponent_decision));
+                // ----------------
+                if let None = opponent.prev_move_self.remove(&player.strategy_name) {
+                    panic!("player memory should be complete")
+                }
+                opponent.prev_move_self.insert(player.strategy_name.clone(), Some(opponent_decision));
+                if let None = opponent.prev_move_other.remove(&player.strategy_name) {
+                    panic!("player memory should be complete")
+                }
+                opponent.prev_move_other.insert(player.strategy_name.clone(), Some(player_decision));
+            }
+            upperlim += 1;
+        }
+        self.current_iter += 1;
+        Some(())
+    }
+}
+
+fn prisoners_dillemma_rules(p1move: &Decision, p2move: &Decision) -> (i32, i32) {
+    use Decision::*;
+    match (p1move, p2move) {
+        (Cooperate, Cooperate) => (-1, -1),
+        (Cooperate, Defect) => (-3, 0),
+        (Defect, Cooperate) => (0, -3),
+        (Defect, Defect) => (-2, -2)
     }
 }
 
@@ -223,7 +293,6 @@ impl eframe::App for App {
 }
 
 fn main() -> Result<(), Error> {
-    // let vr = gametheory::tit_for_tat(None, None);
 
     eframe::run_native(
         "Game Theory",
