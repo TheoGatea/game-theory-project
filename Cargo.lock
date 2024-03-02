@@ -776,7 +776,6 @@ dependencies = [
  "egui_extras",
  "grid",
  "rand",
- "thiserror",
 ]
 
 [[package]]
