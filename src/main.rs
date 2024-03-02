@@ -3,7 +3,7 @@ use gametheory::*;
 use eframe::egui;
 use egui::{Color32, FontData, FontFamily, FontId, TextStyle};
 use grid::Grid;
-use std::collections::{BTreeMap, HashMap};
+use std::{collections::{BTreeMap, HashMap}, task::Wake};
 
 struct Player {
     // stores own previous move towards players keyed by a String, values initialised to None
@@ -189,6 +189,12 @@ impl App {
             self.show_viewport = true;
         }
 
+        ui.with_layout(egui::Layout::bottom_up(egui::Align::RIGHT), |ui| {
+            ui.add(
+                egui::Image::new(egui::include_image!("../felix.png")).max_width(200.0)
+            );
+        });
+
         if self.show_viewport {
             ui.ctx().show_viewport_immediate(
                 egui::ViewportId::from_hash_of("grid"),
@@ -225,7 +231,10 @@ fn main() -> Result<(), Error> {
             renderer: eframe::Renderer::Wgpu,
             ..Default::default()
         },
-        Box::new(move |cc| Box::new(App::new(cc))),
+        Box::new(move |cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
+            Box::new(App::new(cc))
+        }),
     )?;
 
     Ok(())

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 eframe = { version = "0.26", features = ["wgpu", "wayland"], default-features = false }
+egui_extras = { version = "0.26", features = ["default", "all_loaders"] }
 grid = "0.13"
 rand = "0.8"
 thiserror = "1.0"
