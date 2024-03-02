@@ -2,6 +2,7 @@ use rand::distributions::{Bernoulli, Distribution};
 use grid::Grid;
 use std::collections::HashMap;
 use std::ops::Not;
+use std::rc::Rc;
 
 /// Outcome scores for both players based on their decisions in a game iteration.
 type RewardFunc = fn(&Decision, &Decision) -> (i32, i32);
@@ -9,13 +10,13 @@ type RewardFunc = fn(&Decision, &Decision) -> (i32, i32);
 #[derive(Clone)]
 pub struct Player {
     /// Stores own previous move towards players keyed by a String, values initialised to None.
-    prev_move_self: HashMap<String, Option<Decision>>,
+    prev_move_self: HashMap<Rc<str>, Option<Decision>>,
     /// Stores other players decisions towards self, same storage.
-    prev_move_other: HashMap<String, Option<Decision>>,
+    prev_move_other: HashMap<Rc<str>, Option<Decision>>,
     /// Strategy function.
     strategy: DecisionTable,
     /// Name of used player strategy.
-    strategy_name: String,
+    strategy_name: Rc<str>,
 }
 
 pub struct Tournament {
@@ -34,7 +35,7 @@ pub struct Tournament {
 impl Tournament {
     /// Create a new [`Tournament`].
     pub fn from(n_iter: u32, rules: RewardFunc) -> Self {
-        let score_grid = Grid::from_vec(vec![(0, 0); 100], 10);
+        let score_grid = Grid::new(10, 10);
         let player_init_data: [(&str, DecisionTable); 10] = [
             ("trusting tit for tat", good_tit_for_tat),
             ("suspicious tit for tat", sus_tit_for_tat),
@@ -51,18 +52,17 @@ impl Tournament {
         let players: Vec<Player> = player_init_data
             .iter()
             .map(|(name, table)| {
-                let mut initial_player_memory: HashMap<String, Option<Decision>> = HashMap::new();
+                let mut initial_player_memory = HashMap::new();
                 for (opponent_name, _) in player_init_data {
-                    initial_player_memory.insert(opponent_name.to_owned(), None);
+                    initial_player_memory.insert(Rc::from(opponent_name), None);
                 }
                 let memory_of_opponents = initial_player_memory.clone();
-                let p = Player {
+                Player {
                     prev_move_self: initial_player_memory,
                     prev_move_other: memory_of_opponents,
                     strategy: *table,
-                    strategy_name: name.to_string(),
-                };
-                p
+                    strategy_name: Rc::from(*name),
+                }
             })
             .collect();
 
@@ -89,28 +89,24 @@ impl Tournament {
 
                 // Get decisions.
                 let player_decision = (player.strategy)(
-                    player
+                    *player
                         .prev_move_self
                         .get(&opponent.strategy_name)
-                        .expect("player memory should be complete")
-                        .clone(),
-                    player
+                        .expect("player memory should be complete"),
+                    *player
                         .prev_move_other
                         .get(&opponent.strategy_name)
                         .expect("player memory should be complete")
-                        .clone(),
                 );
                 let opponent_decision = (opponent.strategy)(
-                    opponent
+                    *opponent
                         .prev_move_self
                         .get(&player.strategy_name)
-                        .expect("player memory should be complete")
-                        .clone(),
-                    opponent
+                        .expect("player memory should be complete"),
+                    *opponent
                         .prev_move_other
                         .get(&player.strategy_name)
                         .expect("player memory should be complete")
-                        .clone(),
                 );
 
                 // Calculate score.
