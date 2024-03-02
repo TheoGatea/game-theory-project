@@ -17,7 +17,7 @@ struct Player {
 }
 
 struct Tournament {
-    players: Vec<Player>,
+    players: Box<[Player]>,
     scores: Grid<(i32, i32)>,
     max_iter: u32,
     current_iter: u32,
@@ -44,25 +44,27 @@ impl Tournament {
             ("xor logic", xor),
             ("opposite tit for tat", opposite_tit_for_tat),
             ("xnor logic", xnor),
-            ("nand lodic", nand),
+            ("nand logic", nand),
             ("Bernoulli uncooperative", random_biased)];
-        let mut players_lst = Vec::new();
-        for (name, table) in player_init_data {
-            let mut initial_player_memory: HashMap<String, Option<Decision>> = HashMap::new();
-            for (opponent_name, _) in player_init_data {
-                initial_player_memory.insert(opponent_name.to_owned(), None);
-            }
-            let memory_of_opponents = initial_player_memory.clone();
-            let p = Player {
-                prev_move_self: initial_player_memory,
-                prev_move_other: memory_of_opponents,
-                strategy: table,
-                strategy_name: name.to_owned()
-            };
-            players_lst.push(p);
-        }
+        let players_lst: Vec<Player> = player_init_data
+            .iter()
+            .map(|(name, table)| {
+                let mut initial_player_memory: HashMap<String, Option<Decision>> = HashMap::new();
+                for (opponent_name, _) in player_init_data {
+                    initial_player_memory.insert(opponent_name.to_owned(), None);
+                }
+                let memory_of_opponents = initial_player_memory.clone();
+                let p = Player {
+                    prev_move_self: initial_player_memory,
+                    prev_move_other: memory_of_opponents,
+                    strategy: *table,
+                    strategy_name: name.to_string()
+                };
+                p
+            })
+            .collect();
         Tournament {
-            players: players_lst,
+            players: players_lst.into_boxed_slice(),
             scores: score_grid,
             max_iter: n_iter,
             current_iter: 0,
