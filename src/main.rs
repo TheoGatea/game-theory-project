@@ -225,6 +225,10 @@ impl App {
             self.reset_game();
         }
 
+        if ui.button("Save results").clicked() {
+            let _ = self.game.write_scores_to_file();
+        }
+
         ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
             ui.add(egui::Image::new(egui::include_image!("../felix.png")));
         });
