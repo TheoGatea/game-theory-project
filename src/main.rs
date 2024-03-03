@@ -102,8 +102,8 @@ impl App {
         let cols = self.game.scores().cols();
         let grid_width = ui.available_width();
         let grid_height = ui.available_height();
-        let cell_width = grid_width / cols as f32;
-        let cell_height = grid_height / rows as f32;
+        let cell_width = grid_width / (cols + 1) as f32;
+        let cell_height = grid_height / (rows + 1) as f32;
 
         // Allocate the total space based on the available size.
         let rect = ui.allocate_space(egui::vec2(grid_width, grid_height)).1;
