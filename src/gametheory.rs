@@ -88,8 +88,8 @@ impl Tournament {
         if self.current_iter == self.max_iter {
             return true;
         }
+
         let mut upperlim = 1;
-        // let mut opponents = self.players.clone();
         for j in 0..10 {
             for i in 0..upperlim {
                 let player = &mut self.players[i];

@@ -5,6 +5,8 @@ use egui::{Color32, FontData, FontFamily, FontId, Margin, RichText, TextStyle};
 use gametheory::{prisoners_dillemma_rules, Tournament};
 use std::collections::BTreeMap;
 
+// Comes from https://github.com/WINSDK/bite/blob/38ddb5d8f6ee7e46496a2c10d335c2128aceb125/gui/src/panels/source_code.rs#L302
+// This was written by Nicolas but sits in a different codebase.
 fn show_columns<R>(
     ui: &mut egui::Ui,
     split: f32,
@@ -53,7 +55,7 @@ fn show_columns<R>(
         max_height = column.min_size().y.max(max_height);
     }
 
-    // make sure we fit everything next frame
+    // Make sure we fit everything next frame.
     let total_required_width = total_spacing + max_column_width * 2.0;
 
     let size = egui::vec2(ui.available_width().max(total_required_width), max_height);
