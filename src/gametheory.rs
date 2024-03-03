@@ -192,8 +192,7 @@ impl Tournament {
         let mut acc = String::new();
         for (participant_name, score_vec) in scores_map.iter() {
             let average = score_vec.iter().sum::<i32>() as f32 / score_vec.len() as f32;
-            let stdev = std_deviation(&average, &score_vec).unwrap();
-            // unwrap because score_vec is never 0
+            let stdev = std_deviation(&average, &score_vec);
             acc.push_str(participant_name);
             acc.push(':');
             acc.push_str(&average.to_string());
@@ -205,7 +204,7 @@ impl Tournament {
     }
 }
 
-fn std_deviation(mean: &f32, data: &[i32]) -> Option<f32> {
+fn std_deviation(mean: &f32, data: &[i32]) -> f32 {
     match (mean, data.len()) {
         (average, count) if count > 0 => {
             let variance = data.iter().map(|value| {
@@ -214,9 +213,9 @@ fn std_deviation(mean: &f32, data: &[i32]) -> Option<f32> {
                 diff * diff
             }).sum::<f32>() / count as f32;
 
-            Some(variance.sqrt())
+            variance.sqrt()
         },
-        _ => None
+        _ => 0.0
     }
 }
 
