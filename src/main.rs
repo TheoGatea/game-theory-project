@@ -226,7 +226,9 @@ impl App {
         }
 
         if ui.button("Save results").clicked() {
-            let _ = self.game.write_scores_to_file();
+            if let Err(err) = self.game.write_scores_to_file() {
+                eprintln!("{err}");
+            }
         }
 
         ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
