@@ -168,6 +168,56 @@ impl Tournament {
     pub fn scores(&self) -> &Grid<(i32, i32)> {
         &self.scores
     }
+
+    pub fn write_scores_to_file(&self) -> std::io::Result<()> {
+        let mut upperlim = 1;
+        let mut scores_map: HashMap<String, Vec<i32>> = HashMap::new();
+        for j in 0..10 {
+            for i in 0..upperlim {
+                let player_name = self.players[i].strategy_name().replace("\n", " ");
+                let opponent_name = self.opponents[j].strategy_name().replace("\n", " ");
+                let (_, player_score) = self.scores()[(i, j)];
+                let (opponent_score, _) = self.scores()[(i, j)];
+                match scores_map.get_mut(&player_name) {
+                    None => {let _ = scores_map.insert(player_name.clone(), vec![player_score]);},
+                    Some(score_record) => score_record.push(player_score),
+                };
+                match scores_map.get_mut(&opponent_name) {
+                    None => {let _ = scores_map.insert(opponent_name.clone(), vec![opponent_score]);},
+                    Some(score_record) => score_record.push(opponent_score),
+                };
+            }
+            upperlim += 1;
+        }
+        let mut acc = String::new();
+        for (participant_name, score_vec) in scores_map.iter() {
+            let average = score_vec.iter().sum::<i32>() as f32 / score_vec.len() as f32;
+            let stdev = std_deviation(&average, &score_vec).unwrap();
+            // unwrap because score_vec is never 0
+            acc.push_str(participant_name);
+            acc.push(':');
+            acc.push_str(&average.to_string());
+            acc.push(':');
+            acc.push_str(&stdev.to_string());
+            acc.push('\n');
+        }
+        std::fs::write("tournament_results.txt", acc)
+    }
+}
+
+fn std_deviation(mean: &f32, data: &[i32]) -> Option<f32> {
+    match (mean, data.len()) {
+        (average, count) if count > 0 => {
+            let variance = data.iter().map(|value| {
+                let diff = average - (*value as f32);
+
+                diff * diff
+            }).sum::<f32>() / count as f32;
+
+            Some(variance.sqrt())
+        },
+        _ => None
+    }
 }
 
 pub fn prisoners_dillemma_rules(p1move: &Decision, p2move: &Decision) -> (i32, i32) {
