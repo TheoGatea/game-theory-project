@@ -22,6 +22,8 @@ pub struct Player {
 pub struct Tournament {
     /// Players in the game.
     players: Box<[Player]>,
+    /// Opponents to the players (clone of players but with separate memory)
+    opponents: Box<[Player]>,
     /// 10x10 grid where each tuple represents (player vertical score, player horizontal score).
     scores: Grid<(i32, i32)>,
     /// Number of times to apply the [`RewardFunc`].
@@ -67,7 +69,8 @@ impl Tournament {
             .collect();
 
         Tournament {
-            players: players.into_boxed_slice(),
+            players: players.clone().into_boxed_slice(),
+            opponents: players.into_boxed_slice(),
             scores: score_grid,
             max_iter: n_iter,
             current_iter: 0,
@@ -81,11 +84,11 @@ impl Tournament {
             return true;
         }
         let mut upperlim = 1;
-        let mut opponents = self.players.clone();
+        // let mut opponents = self.players.clone();
         for j in 0..10 {
             for i in 0..upperlim {
                 let player = &mut self.players[i];
-                let opponent = &mut opponents[j];
+                let opponent = &mut self.opponents[j];
 
                 // Get decisions.
                 let player_decision = (player.strategy)(
