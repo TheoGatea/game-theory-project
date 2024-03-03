@@ -2,7 +2,6 @@ use rand::distributions::{Bernoulli, Distribution};
 use grid::Grid;
 use std::collections::HashMap;
 use std::ops::Not;
-use std::rc::Rc;
 
 /// Outcome scores for both players based on their decisions in a game iteration.
 type RewardFunc = fn(&Decision, &Decision) -> (i32, i32);
@@ -10,13 +9,13 @@ type RewardFunc = fn(&Decision, &Decision) -> (i32, i32);
 #[derive(Clone)]
 pub struct Player {
     /// Stores own previous move towards players keyed by a String, values initialised to None.
-    prev_move_self: HashMap<Rc<str>, Option<Decision>>,
+    prev_move_self: HashMap<&'static str, Option<Decision>>,
     /// Stores other players decisions towards self, same storage.
-    prev_move_other: HashMap<Rc<str>, Option<Decision>>,
+    prev_move_other: HashMap<&'static str, Option<Decision>>,
     /// Strategy function.
     strategy: DecisionTable,
     /// Name of used player strategy.
-    strategy_name: Rc<str>,
+    strategy_name: &'static str,
 }
 
 pub struct Tournament {
@@ -37,8 +36,7 @@ pub struct Tournament {
 impl Tournament {
     /// Create a new [`Tournament`].
     pub fn from(n_iter: u32, rules: RewardFunc) -> Self {
-        let score_grid = Grid::new(10, 10);
-        let player_init_data: [(&str, DecisionTable); 10] = [
+        static PLAYER_INIT_DATA: [(&str, DecisionTable); 10] = [
             ("trusting tit for tat", good_tit_for_tat),
             ("suspicious tit for tat", sus_tit_for_tat),
             ("naive", naive),
@@ -51,19 +49,20 @@ impl Tournament {
             ("Bernoulli uncooperative", random_biased),
         ];
 
-        let players: Vec<Player> = player_init_data
+        let score_grid = Grid::new(10, 10);
+        let players: Vec<Player> = PLAYER_INIT_DATA
             .iter()
             .map(|(name, table)| {
                 let mut initial_player_memory = HashMap::new();
-                for (opponent_name, _) in player_init_data {
-                    initial_player_memory.insert(Rc::from(opponent_name), None);
+                for (opponent_name, _) in PLAYER_INIT_DATA {
+                    initial_player_memory.insert(opponent_name, None);
                 }
                 let memory_of_opponents = initial_player_memory.clone();
                 Player {
                     prev_move_self: initial_player_memory,
                     prev_move_other: memory_of_opponents,
                     strategy: *table,
-                    strategy_name: Rc::from(*name),
+                    strategy_name: name,
                 }
             })
             .collect();
@@ -118,32 +117,32 @@ impl Tournament {
                 self.scores[(i, j)] = (opponent_score + n, player_score + m);
 
                 // Update memories.
-                if let None = player.prev_move_self.remove(&opponent.strategy_name) {
+                if player.prev_move_self.remove(&opponent.strategy_name).is_none() {
                     panic!("player memory should be complete")
                 }
                 player
                     .prev_move_self
-                    .insert(opponent.strategy_name.clone(), Some(player_decision));
-                if let None = player.prev_move_other.remove(&opponent.strategy_name) {
+                    .insert(opponent.strategy_name, Some(player_decision));
+                if player.prev_move_other.remove(&opponent.strategy_name).is_none() {
                     panic!("player memory should be complete")
                 }
                 player
                     .prev_move_other
-                    .insert(opponent.strategy_name.clone(), Some(opponent_decision));
+                    .insert(opponent.strategy_name, Some(opponent_decision));
                 // ----------------
 
-                if let None = opponent.prev_move_self.remove(&player.strategy_name) {
+                if opponent.prev_move_self.remove(&player.strategy_name).is_none() {
                     panic!("player memory should be complete")
                 }
                 opponent
                     .prev_move_self
-                    .insert(player.strategy_name.clone(), Some(opponent_decision));
-                if let None = opponent.prev_move_other.remove(&player.strategy_name) {
+                    .insert(player.strategy_name, Some(opponent_decision));
+                if opponent.prev_move_other.remove(&player.strategy_name).is_none() {
                     panic!("player memory should be complete")
                 }
                 opponent
                     .prev_move_other
-                    .insert(player.strategy_name.clone(), Some(player_decision));
+                    .insert(player.strategy_name, Some(player_decision));
             }
             upperlim += 1;
         }
