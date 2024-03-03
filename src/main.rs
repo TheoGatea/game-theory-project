@@ -112,7 +112,7 @@ impl App {
         painter.rect_filled(rect, 0.0, Color32::WHITE);
 
         // Draw the vertical grid lines.
-        for row in 0..=cols {
+        for row in 0..=cols + 1 {
             let offset_x = cell_width * row as f32;
 
             painter.line_segment(
@@ -124,8 +124,10 @@ impl App {
             );
         }
 
+        let font_height = cell_width / 6.5;
+
         // Draw the horizontal grid lines.
-        for col in 0..=rows {
+        for col in 0..=rows + 1 {
             let offset_y = cell_height * col as f32;
 
             painter.line_segment(
@@ -137,11 +139,47 @@ impl App {
             );
         }
 
-        let font_height = cell_width / 6.0;
+        // Draw horizontal headers. 
+        for (col, player) in self.game.players().iter().enumerate() {
+            let offset_x = cell_width * (col + 1) as f32;
+
+            let cell_rect = egui::Rect::from_min_size(
+                egui::pos2(rect.left() + offset_x, rect.top()),
+                egui::vec2(cell_width, cell_height),
+            );
+
+            // Draw the strategy.
+            painter.text(
+                cell_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                player.strategy_name(),
+                FontId::monospace(font_height),
+                Color32::BLACK,
+            );
+        }
+
+        // Draw vertical headers.
+        for (row, player) in self.game.opponents().iter().enumerate() {
+            let offset_y = cell_height * (row + 1) as f32;
+
+            let cell_rect = egui::Rect::from_min_size(
+                egui::pos2(rect.left(), rect.top() + offset_y),
+                egui::vec2(cell_width, cell_height),
+            );
+
+            // Draw the strategy.
+            painter.text(
+                cell_rect.center(),
+                egui::Align2::CENTER_CENTER,
+                player.strategy_name(),
+                FontId::monospace(font_height),
+                Color32::BLACK,
+            );
+        }
 
         // Draw the scores within each cell.
-        for row in 0..self.game.scores().rows() {
-            for col in 0..self.game.scores().cols() {
+        for row in 0..rows {
+            for col in 0..cols {
                 let (v_score, h_score) = self.game.scores()[(col, row)];
 
                 // Don't show empty cells.
@@ -149,8 +187,9 @@ impl App {
                     continue;
                 }
 
-                let offset_x = cell_width * row as f32;
-                let offset_y = cell_height * col as f32;
+                // Offset by 1 to allow for the column/row headers.
+                let offset_x = cell_width * (row + 1) as f32;
+                let offset_y = cell_height * (col + 1) as f32;
 
                 let cell_rect = egui::Rect::from_min_size(
                     egui::pos2(rect.left() + offset_x, rect.top() + offset_y),

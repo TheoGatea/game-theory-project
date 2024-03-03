@@ -18,6 +18,12 @@ pub struct Player {
     strategy_name: &'static str,
 }
 
+impl Player {
+    pub fn strategy_name(&self) -> &'static str {
+        self.strategy_name
+    }
+}
+
 pub struct Tournament {
     /// Players in the game.
     players: Box<[Player]>,
@@ -37,13 +43,13 @@ impl Tournament {
     /// Create a new [`Tournament`].
     pub fn from(n_iter: u32, rules: RewardFunc) -> Self {
         static PLAYER_INIT_DATA: [(&str, DecisionTable); 10] = [
-            ("trusting t4t", good_tit_for_tat),
-            ("suspicious t4t", sus_tit_for_tat),
+            ("trusting\nt4t", good_tit_for_tat),
+            ("suspicious\nt4t", sus_tit_for_tat),
             ("naive", naive),
             ("evil", evil),
             ("random", random),
             ("xor", xor),
-            ("opposite t4t", opposite_tit_for_tat),
+            ("opposite\nt4t", opposite_tit_for_tat),
             ("xnor", xnor),
             ("nand", nand),
             ("Bernoulli", random_biased),
