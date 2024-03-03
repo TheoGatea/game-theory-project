@@ -37,16 +37,16 @@ impl Tournament {
     /// Create a new [`Tournament`].
     pub fn from(n_iter: u32, rules: RewardFunc) -> Self {
         static PLAYER_INIT_DATA: [(&str, DecisionTable); 10] = [
-            ("trusting tit for tat", good_tit_for_tat),
-            ("suspicious tit for tat", sus_tit_for_tat),
+            ("trusting t4t", good_tit_for_tat),
+            ("suspicious t4t", sus_tit_for_tat),
             ("naive", naive),
             ("evil", evil),
             ("random", random),
-            ("xor logic", xor),
-            ("opposite tit for tat", opposite_tit_for_tat),
-            ("xnor logic", xnor),
-            ("nand logic", nand),
-            ("Bernoulli uncooperative", random_biased),
+            ("xor", xor),
+            ("opposite t4t", opposite_tit_for_tat),
+            ("xnor", xnor),
+            ("nand", nand),
+            ("Bernoulli", random_biased),
         ];
 
         let score_grid = Grid::new(10, 10);
