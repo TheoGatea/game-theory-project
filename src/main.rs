@@ -124,7 +124,7 @@ impl App {
             );
         }
 
-        let font_height = cell_width / 6.5;
+        let font_height = cell_width / 7.0;
 
         // Draw the horizontal grid lines.
         for col in 0..=rows + 1 {
