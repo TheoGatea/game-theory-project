@@ -151,6 +151,14 @@ impl Tournament {
         false
     }
 
+    pub fn opponents(&self) -> &[Player] {
+        &self.opponents
+    }
+
+    pub fn players(&self) -> &[Player] {
+        &self.players
+    }
+
     pub fn scores(&self) -> &Grid<(i32, i32)> {
         &self.scores
     }

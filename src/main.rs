@@ -1,8 +1,8 @@
 mod gametheory;
 
-use gametheory::{Tournament, prisoners_dillemma_rules};
 use eframe::{egui, Error};
-use egui::{Color32, FontData, FontFamily, FontId, RichText, TextStyle};
+use egui::{Color32, FontData, FontFamily, FontId, Margin, RichText, TextStyle};
+use gametheory::{prisoners_dillemma_rules, Tournament};
 use std::collections::BTreeMap;
 
 fn show_columns<R>(
@@ -63,7 +63,7 @@ fn show_columns<R>(
 
 struct App {
     /// How many steps each simulation run does
-    step_size: usize,
+    n_iters: u32,
     /// Game being played.
     game: Tournament,
 }
@@ -80,16 +80,17 @@ impl App {
         text_styles.insert(TextStyle::Small, FontId::monospace(9.0));
         text_styles.insert(TextStyle::Body, FontId::monospace(12.5));
         text_styles.insert(TextStyle::Monospace, FontId::monospace(12.0));
-        text_styles.insert(TextStyle::Button, FontId::monospace(20.0));
+        text_styles.insert(TextStyle::Button, FontId::monospace(14.0));
         text_styles.insert(TextStyle::Heading, FontId::monospace(18.0));
 
         cc.egui_ctx.set_fonts(fonts);
         cc.egui_ctx.style_mut(|s| s.text_styles = text_styles);
 
-        Self {
-            game,
-            step_size: 1,
-        }
+        Self { game, n_iters: 10 }
+    }
+
+    fn reset_game(&mut self) {
+        self.game = Tournament::from(self.n_iters, prisoners_dillemma_rules);
     }
 
     fn show_grid(&mut self, ui: &mut egui::Ui) {
@@ -136,7 +137,7 @@ impl App {
             );
         }
 
-        let font_height = cell_width / 8.0;
+        let font_height = cell_width / 6.0;
 
         // Draw the scores within each cell.
         for row in 0..self.game.scores().rows() {
@@ -169,24 +170,18 @@ impl App {
     }
 
     fn show_left(&mut self, ui: &mut egui::Ui) {
-        let text = RichText::new(format!("Step size {}", self.step_size)).size(16.0);
-        let slider = egui::widgets::Slider::new(&mut self.step_size, 1..=20)
-            .text(text)
-            .show_value(false);
-        ui.add(slider);
+        ui.style_mut().spacing.item_spacing.x = 10.0;
 
-        if ui.button("Step Once").clicked() {
-            for _ in 0..self.step_size {
-                self.game.step();
-            }
-        }
+        ui.label(RichText::new(format!("#Iterations {}", self.n_iters)).size(14.0));
+        ui.add(egui::widgets::Slider::new(&mut self.n_iters, 10..=100).show_value(false));
 
-        if ui.button("Run to completion").clicked() {
+        if ui.button("Simulate").clicked() {
+            self.reset_game();
             while !self.game.step() {}
         }
 
         if ui.button("Reset").clicked() {
-            self.game = Tournament::from(100, prisoners_dillemma_rules);
+            self.reset_game();
         }
 
         ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -196,7 +191,13 @@ impl App {
 
     fn show(&mut self, ui: &mut egui::Ui) {
         show_columns(ui, 0.2, |lui, rui| {
-            self.show_left(lui);
+            let margin = Margin {
+                right: 5.0,
+                ..Default::default()
+            };
+            egui::Frame::none().inner_margin(margin).show(lui, |lui| {
+                self.show_left(lui);
+            });
             self.show_grid(rui);
         });
     }
