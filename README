@@ -1,2 +1,9 @@
 Game Theory Project
 =====
+
+Requirements:
+* wayland compositor (can be changed)
+* fairly recent version of rustc and cargo
+
+How to run:
+* cargo run --release
