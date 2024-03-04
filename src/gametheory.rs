@@ -1,5 +1,5 @@
-use rand::distributions::{Bernoulli, Distribution};
 use grid::Grid;
+use rand::distributions::{Bernoulli, Distribution};
 use rand::Rng;
 use std::collections::HashMap;
 use std::ops::Not;
@@ -22,9 +22,7 @@ pub struct Player {
 }
 
 const GENOME_LENGTH: i32 = 5;
-
 const POPULATION_SIZE: usize = 20;
-
 const GENERATION_SIZE: usize = 10;
 
 impl Player {
@@ -72,7 +70,7 @@ pub struct Tournament {
 impl Tournament {
     /// Create a new [`Tournament`].
     pub fn from(n_iter: u32, rules: RewardFunc, opponent_starting_pop: Box<[u8]>) -> Self {
-        static PLAYER_INIT_DATA: [(&str, fn (Option<Decision>, Option<Decision>) -> Decision); 10] = [
+        static PLAYER_INIT_DATA: [(&str, fn(Option<Decision>, Option<Decision>) -> Decision); 10] = [
             ("trusting\nt4t", good_tit_for_tat),
             ("suspicious\nt4t", sus_tit_for_tat),
             ("naive", naive),
@@ -86,7 +84,8 @@ impl Tournament {
         ];
         let opponent_names: Vec<String> = (0..POPULATION_SIZE)
             .into_iter()
-            .map(|n| (opponent_starting_pop[n] as i32).to_string()).collect();
+            .map(|n| (opponent_starting_pop[n] as i32).to_string())
+            .collect();
 
         let players: Vec<Player> = PLAYER_INIT_DATA
             .iter()
@@ -104,37 +103,51 @@ impl Tournament {
                 }
             })
             .collect();
-        
-        let opponents_selection = opponent_starting_pop.iter().map(|&c| {
-            let mut initial_opponent_memory = HashMap::new();
-            for (name, _) in PLAYER_INIT_DATA {
-                initial_opponent_memory.insert(name.to_string(), None);
-            }
-            let memory_of_players = initial_opponent_memory.clone();
-            let table_col = number_to_genome(c).iter().map(|&b| {
-                if b { Decision::Cooperate} else {Decision::Defect}
-            }).collect();
-            let gene = table_col.as_slice();
-            let strat: DecisionTable = Box::new(|own_pm, other_pm| {
-                use Decision::*;
-                match (own_pm, other_pm) {
-                    (None, None) => gene[0],
-                    (Some(ownpm), Some(otherpm)) => match (ownpm, otherpm) {
-                        (Cooperate, Cooperate) => gene[1],
-                        (Cooperate, Defect) => gene[2],
-                        (Defect, Cooperate) => gene[3],
-                        (Defect, Defect) => gene[4],
-                    }
-                    (Some(_), None) | (None, Some(_)) => unreachable!("impossible move combination"),
+
+        let opponents_selection = opponent_starting_pop
+            .iter()
+            .map(|&c| {
+                let mut initial_opponent_memory = HashMap::new();
+                for (name, _) in PLAYER_INIT_DATA {
+                    initial_opponent_memory.insert(name.to_string(), None);
                 }
-            });
-            Player {
-                prev_move_self: initial_opponent_memory,
-                prev_move_other: memory_of_players,
-                strategy: strat,
-                strategy_name: (c as i32).to_string()
-            }
-        }).collect();
+                let memory_of_players = initial_opponent_memory.clone();
+                let gene: Vec<Decision> = number_to_genome(c)
+                    .iter()
+                    .map(|&b| {
+                        if b {
+                            Decision::Cooperate
+                        } else {
+                            Decision::Defect
+                        }
+                    })
+                    .collect();
+
+                let strat: DecisionTable = Box::new(move |own_pm, other_pm| {
+                    use Decision::*;
+                    match (own_pm, other_pm) {
+                        (None, None) => gene[0],
+                        (Some(ownpm), Some(otherpm)) => match (ownpm, otherpm) {
+                            (Cooperate, Cooperate) => gene[1],
+                            (Cooperate, Defect) => gene[2],
+                            (Defect, Cooperate) => gene[3],
+                            (Defect, Defect) => gene[4],
+                        },
+                        (Some(_), None) | (None, Some(_)) => {
+                            unreachable!("impossible move combination")
+                        }
+                    }
+                });
+
+                Player {
+                    prev_move_self: initial_opponent_memory,
+                    prev_move_other: memory_of_players,
+                    strategy: strat,
+                    strategy_name: (c as i32).to_string(),
+                }
+            })
+            .collect();
+
         Tournament {
             players: players.into_boxed_slice(),
             opponents: opponents_selection,
@@ -144,68 +157,64 @@ impl Tournament {
         }
     }
 
+    fn execute_round_and_update_scores(&mut self, i: usize, j: usize) {
+        let player = &mut self.players[i];
+        let opponent = &mut self.opponents[j];
+
+        // Get decisions.
+        let player_decision = (player.strategy)(
+            *player
+                .prev_move_self
+                .get(&opponent.strategy_name)
+                .expect("player memory should be complete"),
+            *player
+                .prev_move_other
+                .get(&opponent.strategy_name)
+                .expect("player memory should be complete"),
+        );
+        let opponent_decision = (opponent.strategy)(
+            *opponent
+                .prev_move_self
+                .get(&player.strategy_name)
+                .expect("player memory should be complete"),
+            *opponent
+                .prev_move_other
+                .get(&player.strategy_name)
+                .expect("player memory should be complete"),
+        );
+
+        // Calculate score.
+        let (n, m) = (self.rewardsystem)(&opponent_decision, &player_decision);
+        let (opponent_score, player_score) = self.scores[(i, j)];
+        self.scores[(i, j)] = (opponent_score + n, player_score + m);
+
+        // Update memories.
+        if player.prev_move_self.remove(&opponent.strategy_name).is_none() {
+            panic!("player memory should be complete")
+        }
+        player.prev_move_self.insert(opponent.strategy_name.clone(), Some(player_decision));
+        if player.prev_move_other.remove(&opponent.strategy_name).is_none() {
+            panic!("player memory should be complete")
+        }
+        player.prev_move_other.insert(opponent.strategy_name.clone(), Some(opponent_decision));
+        // ----------------
+
+        if opponent.prev_move_self.remove(&player.strategy_name).is_none() {
+            panic!("player memory should be complete")
+        }
+        opponent.prev_move_self.insert(player.strategy_name.clone(), Some(opponent_decision));
+        if opponent.prev_move_other.remove(&player.strategy_name).is_none() {
+            panic!("player memory should be complete")
+        }
+        opponent.prev_move_other.insert(player.strategy_name.clone(), Some(player_decision));
+    }
+
     /// Runs entire simulation up to n_iter times with current participants
     pub fn run(&mut self) {
         for _ in 0..self.max_iter {
             for j in 0..POPULATION_SIZE {
                 for i in 0..10 {
-                    let player = &mut self.players[i];
-                    let opponent = &mut self.opponents[j];
-    
-                    // Get decisions.
-                    let player_decision = (player.strategy)(
-                        *player
-                            .prev_move_self
-                            .get(&opponent.strategy_name)
-                            .expect("player memory should be complete"),
-                        *player
-                            .prev_move_other
-                            .get(&opponent.strategy_name)
-                            .expect("player memory should be complete")
-                    );
-                    let opponent_decision = (opponent.strategy)(
-                        *opponent
-                            .prev_move_self
-                            .get(&player.strategy_name)
-                            .expect("player memory should be complete"),
-                        *opponent
-                            .prev_move_other
-                            .get(&player.strategy_name)
-                            .expect("player memory should be complete")
-                    );
-    
-                    // Calculate score.
-                    let (n, m) = (self.rewardsystem)(&opponent_decision, &player_decision);
-                    let (opponent_score, player_score) = self.scores[(i, j)];
-                    self.scores[(i, j)] = (opponent_score + n, player_score + m);
-    
-                    // Update memories.
-                    if player.prev_move_self.remove(&opponent.strategy_name).is_none() {
-                        panic!("player memory should be complete")
-                    }
-                    player
-                        .prev_move_self
-                        .insert(opponent.strategy_name.clone(), Some(player_decision));
-                    if player.prev_move_other.remove(&opponent.strategy_name).is_none() {
-                        panic!("player memory should be complete")
-                    }
-                    player
-                        .prev_move_other
-                        .insert(opponent.strategy_name.clone(), Some(opponent_decision));
-                    // ----------------
-    
-                    if opponent.prev_move_self.remove(&player.strategy_name).is_none() {
-                        panic!("player memory should be complete")
-                    }
-                    opponent
-                        .prev_move_self
-                        .insert(player.strategy_name.clone(), Some(opponent_decision));
-                    if opponent.prev_move_other.remove(&player.strategy_name).is_none() {
-                        panic!("player memory should be complete")
-                    }
-                    opponent
-                        .prev_move_other
-                        .insert(player.strategy_name.clone(), Some(player_decision));
+                    self.execute_round_and_update_scores(i, j);
                 }
             }
         }
@@ -225,11 +234,11 @@ impl Tournament {
         }
         score_acc.sort_by_key(|&(_, n)| n);
         score_acc.reverse();
-        let mut leaderboard: Vec<Genome> = score_acc
-            .iter()
-            .map(|&(c, _)| number_to_genome(c))
-            .collect();
-        while leaderboard.len() > 10 {let _ = leaderboard.pop();}
+        let mut leaderboard: Vec<Genome> =
+            score_acc.iter().map(|&(c, _)| number_to_genome(c)).collect();
+        while leaderboard.len() > 10 {
+            let _ = leaderboard.pop();
+        }
         leaderboard.into_boxed_slice()
     }
 
@@ -256,13 +265,13 @@ impl Tournament {
                 match scores_map.get_mut(&player_name) {
                     None => {
                         scores_map.insert(player_name, vec![player_score]);
-                    },
+                    }
                     Some(score_record) => score_record.push(player_score),
                 };
                 match scores_map.get_mut(&opponent_name) {
                     None => {
                         scores_map.insert(opponent_name, vec![opponent_score]);
-                    },
+                    }
                     Some(score_record) => score_record.push(opponent_score),
                 };
             }
@@ -285,13 +294,13 @@ impl Tournament {
     }
 }
 
-/// mutates gene by NOT-ing its value at a random index
+/// Mutates gene by NOT-ing its value at a random index.
 pub fn mutate(gene: &mut [bool]) {
     let i = rand::thread_rng().gen_range(0..=4);
     gene[i] = !gene[i];
 }
 
-/// given two parent genomes, returns two child genomes with a 10% chance of mutation
+/// Given two parent genomes, returns two child genomes with a 10% chance of mutation.
 pub fn reproduce(p1: &Genome, p2: &Genome) -> (Genome, Genome) {
     let mut child1 = [false; GENOME_LENGTH as usize];
     let mut child2 = [false; GENOME_LENGTH as usize];
@@ -315,9 +324,9 @@ pub fn reproduce(p1: &Genome, p2: &Genome) -> (Genome, Genome) {
     (Box::new(child1), Box::new(child2))
 }
 
-/// given the fittest old generation of size [GENERATION_SIZE],
+/// Given the fittest old generation of size [GENERATION_SIZE],
 /// returns the encoding for the new population, which is a box of encoded genomes
-/// of size [POPULATION_SIZE]
+/// of size [POPULATION_SIZE].
 pub fn get_new_generation(old_gen: Box<[Genome]>) -> Box<[u8]> {
     let mut new_gen: Vec<Genome> = Vec::new();
     for i in 0..GENERATION_SIZE {

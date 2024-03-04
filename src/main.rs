@@ -142,7 +142,7 @@ impl App {
             );
         }
 
-        // Draw horizontal headers. 
+        // Draw horizontal headers.
         for (col, player) in self.game.players().iter().enumerate() {
             let offset_x = cell_width * (col + 1) as f32;
 
@@ -259,7 +259,11 @@ impl eframe::App for App {
 
 fn main() -> Result<(), Error> {
     let first_generation: Vec<u8> = (0..20).collect();
-    let mut game = Tournament::from(100, prisoners_dillemma_rules, first_generation.into_boxed_slice());
+    let mut game = Tournament::from(
+        100,
+        prisoners_dillemma_rules,
+        first_generation.into_boxed_slice(),
+    );
     game.run();
     todo!();
     // and the rest is explained
