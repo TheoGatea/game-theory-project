@@ -92,7 +92,8 @@ impl App {
     }
 
     fn reset_game(&mut self) {
-        self.game = Tournament::from(self.n_iters, prisoners_dillemma_rules);
+        // self.game = Tournament::from(self.n_iters, prisoners_dillemma_rules);
+        todo!()
     }
 
     fn show_grid(&mut self, ui: &mut egui::Ui) {
@@ -217,8 +218,8 @@ impl App {
         ui.add(egui::widgets::Slider::new(&mut self.n_iters, 10..=100).show_value(false));
 
         if ui.button("Simulate").clicked() {
-            self.reset_game();
-            while !self.game.step() {}
+            // self.reset_game();
+            // while !self.game.step() {}
         }
 
         if ui.button("Reset").clicked() {
@@ -257,7 +258,11 @@ impl eframe::App for App {
 }
 
 fn main() -> Result<(), Error> {
-    let game = Tournament::from(100, prisoners_dillemma_rules);
+    let first_generation: Vec<u8> = (0..20).collect();
+    let mut game = Tournament::from(100, prisoners_dillemma_rules, first_generation.into_boxed_slice());
+    game.run();
+    todo!();
+    // and the rest is explained
 
     eframe::run_native(
         "Game Theory",
