@@ -5,6 +5,8 @@ use egui::{Color32, FontData, FontFamily, FontId, Margin, RichText, TextStyle};
 use gametheory::{prisoners_dillemma_rules, Tournament};
 use std::collections::BTreeMap;
 
+use crate::gametheory::get_new_generation;
+
 // Comes from https://github.com/WINSDK/bite/blob/38ddb5d8f6ee7e46496a2c10d335c2128aceb125/gui/src/panels/source_code.rs#L302
 // This was written by Nicolas but sits in a different codebase.
 fn show_columns<R>(
@@ -258,25 +260,34 @@ impl eframe::App for App {
 }
 
 fn main() -> Result<(), Error> {
-    let first_generation: Vec<u8> = (0..20).collect();
-    let mut game = Tournament::from(
-        100,
-        prisoners_dillemma_rules,
-        first_generation.into_boxed_slice(),
-    );
-    game.run();
-    todo!();
+    let mut gen: Vec<u8> = (0..20).collect();
+    for _ in 0..10 {
+        let mut game = Tournament::from(
+            100,
+            prisoners_dillemma_rules,
+            gen.into_boxed_slice(),
+        );
+        game.run();
+        let (fittest , mvp_score)= game.select_ten_fittest_and_bestscore();
+        let mvp = &fittest[0];
+        dbg!(mvp);
+        dbg!(mvp_score);
+        gen = get_new_generation(fittest).to_vec();
+    }
+    Ok(())
+
+    // todo!();
     // and the rest is explained
 
-    eframe::run_native(
-        "Game Theory",
-        eframe::NativeOptions {
-            renderer: eframe::Renderer::Wgpu,
-            ..Default::default()
-        },
-        Box::new(move |cc| {
-            egui_extras::install_image_loaders(&cc.egui_ctx);
-            Box::new(App::new(cc, game))
-        }),
-    )
+    // eframe::run_native(
+    //     "Game Theory",
+    //     eframe::NativeOptions {
+    //         renderer: eframe::Renderer::Wgpu,
+    //         ..Default::default()
+    //     },
+    //     Box::new(move |cc| {
+    //         egui_extras::install_image_loaders(&cc.egui_ctx);
+    //         Box::new(App::new(cc, game))
+    //     }),
+    // )
 }

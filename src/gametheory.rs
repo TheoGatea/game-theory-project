@@ -161,8 +161,8 @@ impl Tournament {
     }
 
     fn execute_round_and_update_scores(&mut self, i: usize, j: usize) {
-        let player = &mut self.players[i];
-        let opponent = &mut self.opponents[j];
+        let player = &mut self.players[j];
+        let opponent = &mut self.opponents[i];
 
         // Get decisions.
         let player_decision = (player.strategy)(
@@ -215,8 +215,8 @@ impl Tournament {
     /// Runs entire simulation up to n_iter times with current participants
     pub fn run(&mut self) {
         for _ in 0..self.max_iter {
-            for j in 0..POPULATION_SIZE {
-                for i in 0..10 {
+            for j in 0..10 {
+                for i in 0..POPULATION_SIZE {
                     self.execute_round_and_update_scores(i, j);
                 }
             }
@@ -224,12 +224,12 @@ impl Tournament {
     }
 
     /// returns the genome of the top [`GENERATION_SIZE`] performing opponents and their scores
-    pub fn select_ten_fittest(&self) -> Box<[Genome]> {
+    pub fn select_ten_fittest_and_bestscore(&self) -> (Box<[Genome]>, i32) {
         let mut score_acc: Vec<(u8, i32)> = Vec::new();
-        for j in 0..POPULATION_SIZE {
+        for j in 0..10 {
             let organism: u8 = self.opponents[j].strategy_name.parse().unwrap();
             let mut acc = 0;
-            for i in 0..10 {
+            for i in 0..POPULATION_SIZE {
                 let (score_part, _) = self.scores[(i, j)];
                 acc += score_part
             }
@@ -242,7 +242,8 @@ impl Tournament {
         while leaderboard.len() > 10 {
             let _ = leaderboard.pop();
         }
-        leaderboard.into_boxed_slice()
+        let (_, score_of_best) = score_acc[0];
+        (leaderboard.into_boxed_slice(), score_of_best)
     }
 
     pub fn opponents(&self) -> &[Player] {
