@@ -33,23 +33,26 @@ impl Player {
 
 fn number_to_genome(n: u8) -> Genome {
     let mut genome = [false; GENOME_LENGTH as usize];
+    let mut mask = 1;
     for i in (0..GENOME_LENGTH).rev() {
-        let mask = 2_u8.pow(i as u32);
-        let res = n | mask;
+        let res = n & mask;
         if res != 0 {
             genome[i as usize] = true;
         }
+        mask = mask << 1;
     }
     Box::new(genome)
 }
 
 fn genome_to_number(g: &Genome) -> u8 {
     let mut acc: u8 = 0;
+    let mut exp = 0;
     for i in (0..GENOME_LENGTH).rev() {
-        let n = 2_i32.pow(i as u32);
+        let n = 2_i32.pow(exp);
         if g[i as usize] {
             acc += n as u8;
         }
+        exp += 1;
     }
     acc
 }
