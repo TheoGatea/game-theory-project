@@ -1,11 +1,16 @@
 mod gametheory;
 
 use eframe::{egui, Error};
-use egui::{Color32, FontData, FontFamily, FontId, Margin, RichText, TextStyle};
+use egui_plot::{Line, Plot, PlotPoints};
+use egui::{FontData, FontFamily, FontId, Margin, TextStyle, Color32};
+use egui::mutex::Mutex;
 use gametheory::{prisoners_dillemma_rules, Tournament};
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::gametheory::get_new_generation;
+
+static TEST_COUNT: usize = 30;
 
 // Comes from https://github.com/WINSDK/bite/blob/38ddb5d8f6ee7e46496a2c10d335c2128aceb125/gui/src/panels/source_code.rs#L302
 // This was written by Nicolas but sits in a different codebase.
@@ -66,14 +71,11 @@ fn show_columns<R>(
 }
 
 struct App {
-    /// How many steps each simulation run does
-    n_iters: u32,
-    /// Game being played.
-    game: Tournament,
+    ys: Arc<Mutex<Vec<i32>>>,
 }
 
 impl App {
-    fn new(cc: &eframe::CreationContext, game: Tournament) -> Self {
+    fn new(cc: &eframe::CreationContext) -> Self {
         let font = FontData::from_static(include_bytes!("../PixelMplus12.ttf"));
         let fonts = egui::FontDefinitions {
             font_data: BTreeMap::from([("pixelmplus".to_string(), font)]),
@@ -90,148 +92,183 @@ impl App {
         cc.egui_ctx.set_fonts(fonts);
         cc.egui_ctx.style_mut(|s| s.text_styles = text_styles);
 
-        Self { game, n_iters: 10 }
+        Self { ys: Default::default() }
     }
 
     fn reset_game(&mut self) {
-        // self.game = Tournament::from(self.n_iters, prisoners_dillemma_rules);
-        todo!()
+        self.ys.lock().clear();
     }
 
-    fn show_grid(&mut self, ui: &mut egui::Ui) {
-        const GRID_LINE_WIDTH: f32 = 4.;
+    // fn show_grid(&mut self, ui: &mut egui::Ui) {
+    //     const GRID_LINE_WIDTH: f32 = 4.;
 
-        let rows = self.game.scores().rows();
-        let cols = self.game.scores().cols();
-        let grid_width = ui.available_width();
-        let grid_height = ui.available_height();
-        let cell_width = grid_width / (cols + 1) as f32;
-        let cell_height = grid_height / (rows + 1) as f32;
+    //     let rows = self.game.scores().rows();
+    //     let cols = self.game.scores().cols();
+    //     let grid_width = ui.available_width();
+    //     let grid_height = ui.available_height();
+    //     let cell_width = grid_width / (cols + 1) as f32;
+    //     let cell_height = grid_height / (rows + 1) as f32;
 
-        // Allocate the total space based on the available size.
-        let rect = ui.allocate_space(egui::vec2(grid_width, grid_height)).1;
+    //     // Allocate the total space based on the available size.
+    //     let rect = ui.allocate_space(egui::vec2(grid_width, grid_height)).1;
 
-        let painter = ui.painter();
+    //     let painter = ui.painter();
 
-        // Set the background to white.
-        painter.rect_filled(rect, 0.0, Color32::WHITE);
+    //     // Set the background to white.
+    //     painter.rect_filled(rect, 0.0, Color32::WHITE);
 
-        // Draw the vertical grid lines.
-        for row in 0..=cols + 1 {
-            let offset_x = cell_width * row as f32;
+    //     // Draw the vertical grid lines.
+    //     for row in 0..=cols + 1 {
+    //         let offset_x = cell_width * row as f32;
 
-            painter.line_segment(
-                [
-                    egui::pos2(rect.left() + offset_x, rect.top()),
-                    egui::pos2(rect.left() + offset_x, rect.bottom()),
-                ],
-                (GRID_LINE_WIDTH, Color32::BLACK),
-            );
-        }
+    //         painter.line_segment(
+    //             [
+    //                 egui::pos2(rect.left() + offset_x, rect.top()),
+    //                 egui::pos2(rect.left() + offset_x, rect.bottom()),
+    //             ],
+    //             (GRID_LINE_WIDTH, Color32::BLACK),
+    //         );
+    //     }
 
-        let font_height = cell_width / 7.0;
+    //     let font_height = cell_width / 7.0;
 
-        // Draw the horizontal grid lines.
-        for col in 0..=rows + 1 {
-            let offset_y = cell_height * col as f32;
+    //     // Draw the horizontal grid lines.
+    //     for col in 0..=rows + 1 {
+    //         let offset_y = cell_height * col as f32;
 
-            painter.line_segment(
-                [
-                    egui::pos2(rect.left(), rect.top() + offset_y),
-                    egui::pos2(rect.right(), rect.top() + offset_y),
-                ],
-                (GRID_LINE_WIDTH, Color32::BLACK),
-            );
-        }
+    //         painter.line_segment(
+    //             [
+    //                 egui::pos2(rect.left(), rect.top() + offset_y),
+    //                 egui::pos2(rect.right(), rect.top() + offset_y),
+    //             ],
+    //             (GRID_LINE_WIDTH, Color32::BLACK),
+    //         );
+    //     }
 
-        // Draw horizontal headers.
-        for (col, player) in self.game.players().iter().enumerate() {
-            let offset_x = cell_width * (col + 1) as f32;
+    //     // Draw horizontal headers.
+    //     for (col, player) in self.game.players().iter().enumerate() {
+    //         let offset_x = cell_width * (col + 1) as f32;
 
-            let cell_rect = egui::Rect::from_min_size(
-                egui::pos2(rect.left() + offset_x, rect.top()),
-                egui::vec2(cell_width, cell_height),
-            );
+    //         let cell_rect = egui::Rect::from_min_size(
+    //             egui::pos2(rect.left() + offset_x, rect.top()),
+    //             egui::vec2(cell_width, cell_height),
+    //         );
 
-            // Draw the strategy.
-            painter.text(
-                cell_rect.center(),
-                egui::Align2::CENTER_CENTER,
-                player.strategy_name(),
-                FontId::monospace(font_height),
-                Color32::BLACK,
-            );
-        }
+    //         // Draw the strategy.
+    //         painter.text(
+    //             cell_rect.center(),
+    //             egui::Align2::CENTER_CENTER,
+    //             player.strategy_name(),
+    //             FontId::monospace(font_height),
+    //             Color32::BLACK,
+    //         );
+    //     }
 
-        // Draw vertical headers.
-        for (row, player) in self.game.opponents().iter().enumerate() {
-            let offset_y = cell_height * (row + 1) as f32;
+    //     // Draw vertical headers.
+    //     for (row, player) in self.game.opponents().iter().enumerate() {
+    //         let offset_y = cell_height * (row + 1) as f32;
 
-            let cell_rect = egui::Rect::from_min_size(
-                egui::pos2(rect.left(), rect.top() + offset_y),
-                egui::vec2(cell_width, cell_height),
-            );
+    //         let cell_rect = egui::Rect::from_min_size(
+    //             egui::pos2(rect.left(), rect.top() + offset_y),
+    //             egui::vec2(cell_width, cell_height),
+    //         );
 
-            // Draw the strategy.
-            painter.text(
-                cell_rect.center(),
-                egui::Align2::CENTER_CENTER,
-                player.strategy_name(),
-                FontId::monospace(font_height),
-                Color32::BLACK,
-            );
-        }
+    //         // Draw the strategy.
+    //         painter.text(
+    //             cell_rect.center(),
+    //             egui::Align2::CENTER_CENTER,
+    //             player.strategy_name(),
+    //             FontId::monospace(font_height),
+    //             Color32::BLACK,
+    //         );
+    //     }
 
-        // Draw the scores within each cell.
-        for row in 0..rows {
-            for col in 0..cols {
-                let (v_score, h_score) = self.game.scores()[(col, row)];
+    //     // Draw the scores within each cell.
+    //     for row in 0..rows {
+    //         for col in 0..cols {
+    //             let (v_score, h_score) = self.game.scores()[(col, row)];
 
-                // Don't show empty cells.
-                if v_score == 0 && h_score == 0 {
-                    continue;
-                }
+    //             // Don't show empty cells.
+    //             if v_score == 0 && h_score == 0 {
+    //                 continue;
+    //             }
 
-                // Offset by 1 to allow for the column/row headers.
-                let offset_x = cell_width * (row + 1) as f32;
-                let offset_y = cell_height * (col + 1) as f32;
+    //             // Offset by 1 to allow for the column/row headers.
+    //             let offset_x = cell_width * (row + 1) as f32;
+    //             let offset_y = cell_height * (col + 1) as f32;
 
-                let cell_rect = egui::Rect::from_min_size(
-                    egui::pos2(rect.left() + offset_x, rect.top() + offset_y),
-                    egui::vec2(cell_width, cell_height),
-                );
+    //             let cell_rect = egui::Rect::from_min_size(
+    //                 egui::pos2(rect.left() + offset_x, rect.top() + offset_y),
+    //                 egui::vec2(cell_width, cell_height),
+    //             );
 
-                // Draw the value.
-                painter.text(
-                    cell_rect.center(),
-                    egui::Align2::CENTER_CENTER,
-                    format!("({v_score}, {h_score})"),
-                    FontId::monospace(font_height),
-                    Color32::BLACK,
-                );
-            }
-        }
+    //             // Draw the value.
+    //             painter.text(
+    //                 cell_rect.center(),
+    //                 egui::Align2::CENTER_CENTER,
+    //                 format!("({v_score}, {h_score})"),
+    //                 FontId::monospace(font_height),
+    //                 Color32::BLACK,
+    //             );
+    //         }
+    //     }
+    // }
+
+    fn show_plot(&mut self, ui: &mut egui::Ui) {
+        let points = self.ys.lock().clone().into_iter()
+            .zip(0..TEST_COUNT)
+            .map(|(y, x)| [x as f64, y as f64])
+            .collect();
+
+        let points = PlotPoints::new(points);
+        let price = Line::new(points).color(Color32::LIGHT_BLUE);
+
+        Plot::new("???")
+            .x_axis_label("???")
+            .y_axis_label("???")
+            .allow_zoom(false)
+            .allow_drag(false)
+            .show(ui, |plot_ui| {
+                plot_ui.line(price);
+            });
     }
 
     fn show_left(&mut self, ui: &mut egui::Ui) {
         ui.style_mut().spacing.item_spacing.x = 10.0;
 
-        ui.label(RichText::new(format!("#Iterations {}", self.n_iters)).size(14.0));
-        ui.add(egui::widgets::Slider::new(&mut self.n_iters, 10..=100).show_value(false));
+        // ui.label(RichText::new(format!("#Iterations {}", self.n_iters)).size(14.0));
+        // ui.add(egui::widgets::Slider::new(&mut self.n_iters, 10..=100).show_value(false));
+
+        fn simulate(ctx: egui::Context, ys: Arc<Mutex<Vec<i32>>>) {
+            let mut gen = (0..20).collect::<Vec<u8>>().into_boxed_slice();
+
+            ys.lock().clear();
+
+            for _ in 0..TEST_COUNT {
+                let mut game = Tournament::from(
+                    100,
+                    prisoners_dillemma_rules,
+                    gen,
+                );
+                game.run();
+                let (fittest, mvp_score) = game.select_ten_fittest_and_bestscore();
+                let _mvp = &fittest[0];
+
+                ys.lock().push(mvp_score);
+                ctx.request_repaint();
+
+                gen = get_new_generation(fittest);
+            }
+        }
 
         if ui.button("Simulate").clicked() {
-            // self.reset_game();
-            // while !self.game.step() {}
+            let ctx = ui.ctx().clone();
+            let xs = self.ys.clone();
+            std::thread::spawn(move || simulate(ctx, xs));
         }
 
         if ui.button("Reset").clicked() {
             self.reset_game();
-        }
-
-        if ui.button("Save results").clicked() {
-            if let Err(err) = self.game.write_scores_to_file() {
-                eprintln!("{err}");
-            }
         }
 
         ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
@@ -248,7 +285,9 @@ impl App {
             egui::Frame::none().inner_margin(margin).show(lui, |lui| {
                 self.show_left(lui);
             });
-            self.show_grid(rui);
+
+            self.show_plot(rui);
+            // self.show_grid(rui);
         });
     }
 }
@@ -260,34 +299,15 @@ impl eframe::App for App {
 }
 
 fn main() -> Result<(), Error> {
-    let mut gen: Vec<u8> = (0..20).collect();
-    for _ in 0..10 {
-        let mut game = Tournament::from(
-            100,
-            prisoners_dillemma_rules,
-            gen.into_boxed_slice(),
-        );
-        game.run();
-        let (fittest , mvp_score)= game.select_ten_fittest_and_bestscore();
-        let mvp = &fittest[0];
-        dbg!(mvp);
-        dbg!(mvp_score);
-        gen = get_new_generation(fittest).to_vec();
-    }
-    Ok(())
-
-    // todo!();
-    // and the rest is explained
-
-    // eframe::run_native(
-    //     "Game Theory",
-    //     eframe::NativeOptions {
-    //         renderer: eframe::Renderer::Wgpu,
-    //         ..Default::default()
-    //     },
-    //     Box::new(move |cc| {
-    //         egui_extras::install_image_loaders(&cc.egui_ctx);
-    //         Box::new(App::new(cc, game))
-    //     }),
-    // )
+    eframe::run_native(
+        "Game Theory",
+        eframe::NativeOptions {
+            renderer: eframe::Renderer::Wgpu,
+            ..Default::default()
+        },
+        Box::new(move |cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
+            Box::new(App::new(cc))
+        }),
+    )
 }

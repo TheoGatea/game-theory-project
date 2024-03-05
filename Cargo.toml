@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 eframe = { version = "0.26", features = ["wgpu", "wayland"], default-features = false }
 egui_extras = { version = "0.26", features = ["default", "all_loaders"] }
+egui_plot = "0.26"
 grid = "0.13"
 rand = "0.8"
 
