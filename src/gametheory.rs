@@ -25,12 +25,6 @@ const GENOME_LENGTH: i32 = 5;
 const POPULATION_SIZE: usize = 20;
 const GENERATION_SIZE: usize = 10;
 
-impl Player {
-    pub fn strategy_name(&self) -> String {
-        self.strategy_name.clone()
-    }
-}
-
 fn number_to_genome(n: u8) -> Genome {
     let mut genome = [false; GENOME_LENGTH as usize];
     let mut mask = 1;
@@ -245,57 +239,6 @@ impl Tournament {
         let (_, score_of_best) = score_acc[0];
         (leaderboard.into_boxed_slice(), score_of_best)
     }
-
-    pub fn opponents(&self) -> &[Player] {
-        &self.opponents
-    }
-
-    pub fn players(&self) -> &[Player] {
-        &self.players
-    }
-
-    pub fn scores(&self) -> &Grid<(i32, i32)> {
-        &self.scores
-    }
-
-    pub fn write_scores_to_file(&self) -> std::io::Result<()> {
-        let mut upperlim = 1;
-        let mut scores_map = HashMap::new();
-        for j in 0..10 {
-            for i in 0..upperlim {
-                let player_name = self.players[i].strategy_name().replace("\n", " ");
-                let opponent_name = self.opponents[j].strategy_name().replace("\n", " ");
-                let (opponent_score, player_score) = self.scores[(i, j)];
-                match scores_map.get_mut(&player_name) {
-                    None => {
-                        scores_map.insert(player_name, vec![player_score]);
-                    }
-                    Some(score_record) => score_record.push(player_score),
-                };
-                match scores_map.get_mut(&opponent_name) {
-                    None => {
-                        scores_map.insert(opponent_name, vec![opponent_score]);
-                    }
-                    Some(score_record) => score_record.push(opponent_score),
-                };
-            }
-            upperlim += 1;
-        }
-
-        let mut acc = String::new();
-        for (participant_name, score_vec) in scores_map.iter() {
-            let average = score_vec.iter().sum::<i32>() as f32 / score_vec.len() as f32;
-            let stdev = std_deviation(average, &score_vec);
-            acc.push_str(participant_name);
-            acc.push(':');
-            acc.push_str(&average.to_string());
-            acc.push(':');
-            acc.push_str(&stdev.to_string());
-            acc.push('\n');
-        }
-
-        std::fs::write("tournament_results.txt", acc)
-    }
 }
 
 /// Mutates gene by NOT-ing its value at a random index.
@@ -342,19 +285,6 @@ pub fn get_new_generation(old_gen: Box<[Genome]>) -> Box<[u8]> {
     }
     let new_gen: Vec<u8> = new_gen.iter().map(|g| genome_to_number(g)).collect();
     new_gen.into_boxed_slice()
-}
-
-fn std_deviation(mean: f32, data: &[i32]) -> f32 {
-    let cum_std: f32 = data
-        .iter()
-        .map(|&value| {
-            let diff = mean - value as f32;
-            diff * diff
-        })
-        .sum();
-
-    let var = cum_std / data.len() as f32;
-    var.sqrt()
 }
 
 pub fn prisoners_dillemma_rules(p1move: &Decision, p2move: &Decision) -> (i32, i32) {
