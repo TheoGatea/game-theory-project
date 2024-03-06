@@ -2,7 +2,7 @@ mod gametheory;
 
 use eframe::{egui, Error};
 use egui::mutex::Mutex;
-use egui::{Color32, FontData, FontFamily, FontId, Margin, RichText, TextStyle};
+use egui::{Color32, FontData, FontFamily, FontId, RichText, TextStyle};
 use egui_plot::{Line, Plot, PlotPoints};
 use gametheory::{prisoners_dillemma_rules, Tournament};
 use std::collections::BTreeMap;
@@ -72,7 +72,8 @@ fn show_columns<R>(
 struct App {
     ys: Arc<Mutex<Vec<i32>>>,
     simulating: Arc<AtomicBool>,
-    n_iters: i32,
+    gen_count: u32,
+    game_count: u32,
 }
 
 impl App {
@@ -96,7 +97,8 @@ impl App {
         Self {
             ys: Default::default(),
             simulating: Arc::new(AtomicBool::new(false)),
-            n_iters: 100,
+            gen_count: 100,
+            game_count: 10,
         }
     }
 
@@ -111,7 +113,7 @@ impl App {
             .lock()
             .clone()
             .into_iter()
-            .zip(0..self.n_iters)
+            .zip(0..self.gen_count)
             .map(|(y, x)| [x as f64, y as f64])
             .collect();
 
@@ -131,17 +133,19 @@ impl App {
     }
 
     fn show_left(&mut self, ui: &mut egui::Ui) {
-        ui.style_mut().spacing.item_spacing.x = 10.0;
+        ui.label(RichText::new(format!("#Generations: {}", self.gen_count)).size(14.0));
+        ui.add(egui::widgets::Slider::new(&mut self.gen_count, 100..=300).show_value(false));
 
-        ui.label(RichText::new(format!("#Iterations {}", self.n_iters)).size(14.0));
-        ui.add(egui::widgets::Slider::new(&mut self.n_iters, 100..=300).show_value(false));
+        ui.label(RichText::new(format!("#Games Per Gen: {}", self.game_count)).size(14.0));
+        ui.add(egui::widgets::Slider::new(&mut self.game_count, 10..=100).show_value(false));
 
         if ui.button("Simulate").clicked() {
             let ctx = ui.ctx().clone();
             let xs = self.ys.clone();
             let sim = self.simulating.clone();
-            let n_iters = self.n_iters;
-            std::thread::spawn(move || simulate(ctx, xs, sim, n_iters));
+            let game_count = self.game_count;
+            let gen_count = self.gen_count;
+            std::thread::spawn(move || simulate(ctx, xs, sim, game_count, gen_count));
         }
 
         if ui.button("Reset").clicked() {
@@ -155,28 +159,26 @@ impl App {
 
     fn show(&mut self, ui: &mut egui::Ui) {
         show_columns(ui, 0.2, |lui, rui| {
-            let margin = Margin {
-                right: 5.0,
-                ..Default::default()
-            };
-            egui::Frame::none().inner_margin(margin).show(lui, |lui| {
-                self.show_left(lui);
-            });
-
+            self.show_left(lui);
             self.show_plot(rui);
-            // self.show_grid(rui);
         });
     }
 }
 
-fn simulate(ctx: egui::Context, ys: Arc<Mutex<Vec<i32>>>, sim: Arc<AtomicBool>, n_iters: i32) {
+fn simulate(
+    ctx: egui::Context,
+    ys: Arc<Mutex<Vec<i32>>>,
+    sim: Arc<AtomicBool>,
+    game_count: u32,
+    gen_count: u32,
+) {
     let mut gen = (0..20).collect::<Vec<u8>>().into_boxed_slice();
 
     sim.store(true, Ordering::Relaxed);
     ys.lock().clear();
 
-    for _ in 0..n_iters {
-        let mut game = Tournament::from(100, prisoners_dillemma_rules, gen);
+    for _ in 0..gen_count {
+        let mut game = Tournament::from(game_count, prisoners_dillemma_rules, gen);
         game.run();
         let (fittest, mvp_score) = game.select_ten_fittest_and_bestscore();
         let _mvp = &fittest[0];
