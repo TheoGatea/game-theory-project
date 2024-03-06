@@ -7,6 +7,7 @@ use egui::mutex::Mutex;
 use gametheory::{prisoners_dillemma_rules, Tournament};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::gametheory::get_new_generation;
 
@@ -72,6 +73,7 @@ fn show_columns<R>(
 
 struct App {
     ys: Arc<Mutex<Vec<i32>>>,
+    simulating: Arc<AtomicBool>
 }
 
 impl App {
@@ -92,7 +94,7 @@ impl App {
         cc.egui_ctx.set_fonts(fonts);
         cc.egui_ctx.style_mut(|s| s.text_styles = text_styles);
 
-        Self { ys: Default::default() }
+        Self { ys: Default::default(), simulating: Arc::new(AtomicBool::new(false)) }
     }
 
     fn reset_game(&mut self) {
@@ -223,9 +225,9 @@ impl App {
         let points = PlotPoints::new(points);
         let price = Line::new(points).color(Color32::LIGHT_BLUE);
 
-        Plot::new("???")
-            .x_axis_label("???")
-            .y_axis_label("???")
+        Plot::new("Evolution")
+            .x_axis_label("Tournaments")
+            .y_axis_label("Score")
             .allow_zoom(false)
             .allow_drag(false)
             .show(ui, |plot_ui| {
@@ -239,9 +241,10 @@ impl App {
         // ui.label(RichText::new(format!("#Iterations {}", self.n_iters)).size(14.0));
         // ui.add(egui::widgets::Slider::new(&mut self.n_iters, 10..=100).show_value(false));
 
-        fn simulate(ctx: egui::Context, ys: Arc<Mutex<Vec<i32>>>) {
+        fn simulate(ctx: egui::Context, ys: Arc<Mutex<Vec<i32>>>, sim: Arc<AtomicBool>) {
             let mut gen = (0..20).collect::<Vec<u8>>().into_boxed_slice();
 
+            sim.store(true, Ordering::Relaxed);
             ys.lock().clear();
 
             for _ in 0..TEST_COUNT {
@@ -259,12 +262,15 @@ impl App {
 
                 gen = get_new_generation(fittest);
             }
+
+            sim.store(false, Ordering::Relaxed);
         }
 
-        if ui.button("Simulate").clicked() {
+        if ui.button("Simulate").clicked() && !self.simulating.load(Ordering::Relaxed) {
             let ctx = ui.ctx().clone();
             let xs = self.ys.clone();
-            std::thread::spawn(move || simulate(ctx, xs));
+            let sim = self.simulating.clone();
+            std::thread::spawn(move || simulate(ctx, xs, sim));
         }
 
         if ui.button("Reset").clicked() {
