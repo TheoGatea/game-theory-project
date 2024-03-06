@@ -98,6 +98,7 @@ impl App {
     }
 
     fn reset_game(&mut self) {
+        self.simulating.store(false, Ordering::Relaxed);
         self.ys.lock().clear();
     }
 
@@ -257,6 +258,10 @@ impl App {
                 let (fittest, mvp_score) = game.select_ten_fittest_and_bestscore();
                 let _mvp = &fittest[0];
 
+                if !sim.load(Ordering::Relaxed) {
+                    return;
+                }
+
                 ys.lock().push(mvp_score);
                 ctx.request_repaint();
 
@@ -266,7 +271,7 @@ impl App {
             sim.store(false, Ordering::Relaxed);
         }
 
-        if ui.button("Simulate").clicked() && !self.simulating.load(Ordering::Relaxed) {
+        if ui.button("Simulate").clicked() {
             let ctx = ui.ctx().clone();
             let xs = self.ys.clone();
             let sim = self.simulating.clone();

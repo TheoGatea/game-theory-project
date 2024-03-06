@@ -12,7 +12,3 @@ Cargo is the package manager and build tool for the Rust programming language.
 Installation can be checked by running "cargo --version". If it is not
 installed, follow the steps detailed below.
 * https://doc.rust-lang.org/cargo/getting-started/installation.html
-
-Do's and dont's concerning the GUI:
-* Wait for the simulation to finish upon pressing the simulate button
-* Do not interact with the GUI while the simulation is still running
