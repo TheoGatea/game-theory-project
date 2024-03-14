@@ -248,40 +248,33 @@ pub fn mutate(gene: &mut [bool]) {
 }
 
 /// Given two parent genomes, returns two child genomes with a 10% chance of mutation.
-pub fn reproduce(p1: &Genome, p2: &Genome) -> (Genome, Genome) {
-    let mut child1 = [false; GENOME_LENGTH as usize];
-    let mut child2 = [false; GENOME_LENGTH as usize];
+pub fn reproduce(p1: &Genome, p2: &Genome) -> Genome {
+    let mut child = [false; GENOME_LENGTH as usize];
     for idx in 0..GENOME_LENGTH {
         let i = idx as usize;
-        if i < 3 {
-            child1[i] = p1[i];
-            child2[i] = p2[i];
+        if i % 2 == 0 {
+            child[i] = p1[i];
         } else {
-            child1[i] = p2[i];
-            child2[i] = p1[i];
+            child[i] = p2[i];
         }
     }
     let mutation_dist = Bernoulli::new(0.1).unwrap();
     if mutation_dist.sample(&mut rand::thread_rng()) {
-        mutate(&mut child1);
+        mutate(&mut child);
     }
-    if mutation_dist.sample(&mut rand::thread_rng()) {
-        mutate(&mut child2);
-    }
-    (Box::new(child1), Box::new(child2))
+    Box::new(child)
 }
 
 /// Given the fittest old generation of size [GENERATION_SIZE],
 /// returns the encoding for the new population, which is a box of encoded genomes
 /// of size [POPULATION_SIZE].
 pub fn get_new_generation(old_gen: Box<[Genome]>) -> Box<[u8]> {
-    let mut new_gen: Vec<Genome> = Vec::new();
+    let mut new_gen = old_gen.to_vec();
     for i in 0..GENERATION_SIZE {
         let parent1 = &old_gen[i];
         let parent2 = &old_gen[(i + 1) % GENERATION_SIZE];
-        let (child1, child2) = reproduce(parent1, parent2);
+        let child1 = reproduce(parent1, parent2);
         new_gen.push(child1);
-        new_gen.push(child2);
     }
     let new_gen: Vec<u8> = new_gen.iter().map(|g| genome_to_number(g)).collect();
     new_gen.into_boxed_slice()
